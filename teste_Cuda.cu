@@ -4,29 +4,33 @@
 #include <math.h>
 
 // Kernel function to add the elements of two arrays
-__global__
+/*__global__
 void add(int n, float *x, float *y)
 {
   for (int i = 0; i < n; i++)
     y[i] = x[i] + y[i];
-}
+}*/
 
 int main(void)
 {
-  int N = 1<<20;
-  float *x, *y;
+  int N = 20;
+  float *x; 
+  float *y;
 
   printf("oi");
   // Allocate Unified Memory – accessible from CPU or GPU
-  cudaMallocManaged(&x, N*sizeof(float));
-  cudaMallocManaged(&y, N*sizeof(float));
+  cudaMallocManaged(&x, N*sizeof(float*));
+  cudaMallocManaged(&y, N*sizeof(float*));
 
   // initialize x and y arrays on the host
   for (int i = 0; i < N; i++) {
     x[i] = 1.0f;
     y[i] = 2.0f;
+    printf("%f %f", x[i], y[i]);
   }
 
+  printf("%f %f", x[0], y[0]);
+/*
   // Run kernel on 1M elements on the GPU
   add<<<1, 1>>>(N, x, y);
 
@@ -38,10 +42,10 @@ int main(void)
   for (int i = 0; i < N; i++)
     maxError = fmax(maxError, fabs(y[i]-3.0f));
   std::cout << "Max error: " << maxError << std::endl;
-
+*/
   // Free memory
-  cudaFree(x);
-  cudaFree(y);
+  /*cudaFree(x);
+  cudaFree(y);*/
   
   return 0;
 }
