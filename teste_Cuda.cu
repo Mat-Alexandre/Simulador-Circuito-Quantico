@@ -16,6 +16,7 @@ int main(void)
   int N = 1<<20;
   float *x, *y;
 
+  printf("oi");
   // Allocate Unified Memory – accessible from CPU or GPU
   cudaMallocManaged(&x, N*sizeof(float));
   cudaMallocManaged(&y, N*sizeof(float));
