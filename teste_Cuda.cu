@@ -1,7 +1,5 @@
 #include<stdio.h>
 #include<stdlib.h>
-#include <iostream>
-#include <math.h>
 
 #define N 8
 // Kernel function to add the elements of two arrays
