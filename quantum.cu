@@ -1,69 +1,114 @@
-#include "quantum.cuh"
+﻿#include "quantum.cuh"
 
 /* QUBITS FUNCTIONS */
 
-struct qubit initQubit(int size){
-    struct qubit q;
-    q.amplitude = (struct complex*)malloc(size * sizeof(struct complex));
-    q.size = size;
-    return q;
+qubit initQubit(int size) {
+	qubit q;
+	q.amplitude[0].imag = .0f;
+	q.amplitude[0].real = .0f;
+	q.size = size;
+	return q;
 }
 
-void freeQubit(struct qubit q){
-    free(q.amplitude);
+void freeQubit(qubit q) {
+	free(q.amplitude);
 }
 
 /* OTHER FUNCTIONS*/
 
-struct complex complexProduct(struct complex a, struct complex b){
-    struct complex c;
-    c.real = (a.real*b.real) - (a.imag*b.imag);
-    c.imag = (a.real*b.imag) + (a.imag*b.real);
+complex complexProduct(complex a, complex b) {
+	complex c;
+	c.real = (a.real * b.real) - (a.imag * b.imag);
+	c.imag = (a.real * b.imag) + (a.imag * b.real);
 
-    return c;
+	return c;
 }
 
-struct qubit tensorProduct(struct qubit q1, struct qubit q2){
-    struct qubit res = initQubit(q1.size*q2.size);
-    
-    for(int i = 0; i < q1.size; i++){
-        for(int j = 0; j < q2.size; j++){
-            res.amplitude[q1.size * i + j] = complexProduct(q1.amplitude[i], q2.amplitude[j]);
-        }
-    }
-    
-    return res;
+qubit tensorProduct(qubit q1, qubit q2) {
+	qubit res = initQubit(q1.size * q2.size);
+
+	for (int i = 0; i < q1.size; i++) {
+		for (int j = 0; j < q2.size; j++) {
+			res.amplitude[q1.size * i + j] = complexProduct(q1.amplitude[i], q2.amplitude[j]);
+		}
+	}
+
+	return res;
 }
 
-void printQubit(struct qubit q){
-    for (int i = 0; i < q.size; i++) printf("(%.2f + %.2fi) * |%d>\n", q.amplitude[0].real, q.amplitude[0].imag, i);
+void printQubit(qubit q) {
+	for (int i = 0; i < q.size; i++) printf("(%.2f + %.2fi) * |%d>\n", q.amplitude[0].real, q.amplitude[0].imag, i);
 }
 
 /* QUANTUM GATES */
 
-void notGate(struct qubit q){
-    struct complex aux = q.amplitude[0];
-    q.amplitude[0] = q.amplitude[1];
-    q.amplitude[1] = aux;
+__global__ void notGate(qubit* d_q) {
+	int index = threadIdx.x;
+
+	complex aux = d_q[index].amplitude[0];
+	d_q[index].amplitude[0] = d_q[index].amplitude[1];
+	d_q[index].amplitude[1] = aux;
 }
 
-void hadamardGate(struct qubit q){
-    float ampH = 1/sqrt(2);
-    struct complex alpha, beta;
+__global__ void hadamardGate(qubit* d_q) {
+	int index = threadIdx.x;
 
-    alpha.real = (q.amplitude[0].real + q.amplitude[1].real)*ampH;
-    alpha.imag = (q.amplitude[0].real + q.amplitude[1].real)*ampH;
+	float ampH = 0.70710678118; //1/sqrt(2) : sqrt não pode ser utilizado por ser uma função host
+	complex alpha, beta;
 
-    beta.real = (q.amplitude[0].real - q.amplitude[1].real)*ampH;
-    beta.imag = (q.amplitude[0].real - q.amplitude[1].real)*ampH;
+	alpha.real = (d_q[index].amplitude[0].real + d_q[index].amplitude[1].real) * ampH;
+	alpha.imag = (d_q[index].amplitude[0].real + d_q[index].amplitude[1].real) * ampH;
 
-    q.amplitude[0] = alpha;
-    q.amplitude[1] = beta;
+	beta.real = (d_q[index].amplitude[0].real - d_q[index].amplitude[1].real) * ampH;
+	beta.imag = (d_q[index].amplitude[0].real - d_q[index].amplitude[1].real) * ampH;
+
+	d_q[index].amplitude[0] = alpha;
+	d_q[index].amplitude[1] = beta;
 }
 
-void phaseGate(struct qubit q){
-   float b = -q.amplitude[1].imag;
-   float c = q.amplitude[1].real;
-   q.amplitude[1].real = b;
-   q.amplitude[1].imag = c;
+__global__ void phaseGate(qubit* d_q) {	
+	int index = threadIdx.x;
+	float b = -d_q[index].amplitude[1].imag;
+	float c = d_q[index].amplitude[1].real;
+	d_q[index].amplitude[1].real = b;
+	d_q[index].amplitude[1].imag = c;
+}
+
+__global__ void notGateRange(qubit* d_q, int a, int b) {
+	// Executa a função nos bits dentro do range de a -- b
+	int index = threadIdx.x;
+	if (index >= a && index <= b) {
+		complex aux = d_q[index].amplitude[0];
+		d_q[index].amplitude[0] = d_q[index].amplitude[1];
+		d_q[index].amplitude[1] = aux;
+	}
+}
+
+__global__ void hadamardGateRange(qubit* d_q, int a, int b) {
+	int index = threadIdx.x;
+
+	if (index >= a && index <= b) {
+
+		float ampH = 0.70710678118;
+		complex alpha, beta;
+
+		alpha.real = (d_q[index].amplitude[0].real + d_q[index].amplitude[1].real) * ampH;
+		alpha.imag = (d_q[index].amplitude[0].real + d_q[index].amplitude[1].real) * ampH;
+
+		beta.real = (d_q[index].amplitude[0].real - d_q[index].amplitude[1].real) * ampH;
+		beta.imag = (d_q[index].amplitude[0].real - d_q[index].amplitude[1].real) * ampH;
+
+		d_q[index].amplitude[0] = alpha;
+		d_q[index].amplitude[1] = beta;
+	}
+}
+
+__global__ void phaseGateRange(qubit* q, int a, int b) {
+	int index = threadIdx.x;
+	if (index >= a && index <= b) {
+		float b = -q[index].amplitude[1].imag;
+		float c = q[index].amplitude[1].real;
+		q[index].amplitude[1].real = b;
+		q[index].amplitude[1].imag = c;
+	}
 }
