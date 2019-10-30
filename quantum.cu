@@ -42,6 +42,36 @@ void printQubit(qubit q) {
 
 /* QUANTUM GATES */
 
+__global__ void toffoliGate(qubit* d_q, int *c1, int *c2, int *t){
+	int index = threadIdx.x;
+
+	// A aplcação da porta só pode ser efetuada se os vetores possuirem o mesmo tamanho
+	if(sizeof(t[0])/sizeof(t) == sizeof(c1[0])/sizeof(c1) &&
+ 	   sizeof(c1[0])/sizeof(c1) == sizeof(c2[0])/sizeof(c2))
+	// Se os qubit c1 e c2 possuirem amplitudes do vetor |1> diferente de 0, trocar o sinal do qubit em t
+	if((d_q[c1[index]].amplitude[1].real != .0f || d_q[c1[index]].amplitude[1].imag != .0f) &&
+	   (d_q[c2[index]].amplitude[1].real != .0f || d_q[c2[index]].amplitude[1].imag != .0f)){
+		complex aux = d_q[t[index]].amplitude[0];
+		d_q[t[index]].amplitude[0] = d_q[t[index]].amplitude[1];
+		d_q[t[index]].amplitude[1] = aux;
+	}
+}
+
+__global__ void cnotGate(qubit* d_q, int *t, int *ctrl){
+	// t é um ponteiro para vetor de qubits a serem afetados pela porta cnotGate
+	// ctrl é um ponteiro para vetor de qubits de controle
+	int index = threadIdx.x;
+
+	// verificar se o temanho dos dois vetores são os mesmos
+	if(sizeof(t[0])/sizeof(t) == sizeof(ctrl[0])/sizeof(ctrl))
+	// Se o qubit ctrl possuir amplitude do vetor |1> diferente de 0, trocar o sinal do qubit em t
+	if(d_q[ctrl[index]].amplitude[1].real != .0f || d_q[ctrl[index]].amplitude[1].imag != .0f){
+		complex aux = d_q[t[index]].amplitude[0];
+		d_q[t[index]].amplitude[0] = d_q[t[index]].amplitude[1];
+		d_q[t[index]].amplitude[1] = aux;
+	}
+}
+
 __global__ void notGate(qubit* d_q) {
 	int index = threadIdx.x;
 
