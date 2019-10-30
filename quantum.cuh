@@ -31,6 +31,10 @@ void printQubit(qubit q);
 
 /* QUANTUM GATES */
 
+__global__ void toffoliGate(qubit* d_q, int *c1, int *c2, int *t);
+
+__global__ void cnotGate(qubit* d_q, int *t, int *ctrl);
+
 __global__ void notGate(qubit *d_q);
 
 __global__ void hadamardGate(qubit *d_q);
@@ -44,7 +48,7 @@ __global__ void hadamardGateRange(qubit* d_q, int a, int b);
 __global__ void phaseGateRange(qubit* q, int a, int b);
 
 /*
-cnot, toffoli em n qbits, emaranhamento, aplicação em um determinado qbit
+cnot, toffoli em n qbits, emaranhamento, aplicaÃ§Ã£o em um determinado qbit
 */
 
 #endif
