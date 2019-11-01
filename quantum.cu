@@ -1,4 +1,4 @@
-﻿#include "quantum.cuh"
+#include "quantum.cuh"
 
 /* QUBITS FUNCTIONS */
 
@@ -24,48 +24,40 @@ complex complexProduct(complex a, complex b) {
 	return c;
 }
 
-qubit tensorProduct(qubit q1, qubit q2) {
-	qubit res = initQubit(q1.size * q2.size);
-
-	for (int i = 0; i < q1.size; i++) {
-		for (int j = 0; j < q2.size; j++) {
-			res.amplitude[q1.size * i + j] = complexProduct(q1.amplitude[i], q2.amplitude[j]);
+__host__ void printQubit(qubit* q, int size) {
+	printf("Qubit\treal\timag\n");
+	for (int i = 0; i < size; i++) {
+		for (int j = 0; j < 2; j++) {
+			printf("%d.%d\t%.2f\t%.2f\n", i, j, q[i].amplitude[j].real, q[i].amplitude[j].imag);
 		}
+		printf("\n");
 	}
-
-	return res;
-}
-
-void printQubit(qubit q) {
-	for (int i = 0; i < q.size; i++) printf("(%.2f + %.2fi) * |%d>\n", q.amplitude[0].real, q.amplitude[0].imag, i);
 }
 
 /* QUANTUM GATES */
 
-__global__ void toffoliGate(qubit* d_q, int *c1, int *c2, int *t){
+__global__ void toffoliGate(qubit* d_q, int* t, int* c1, int* c2) {
 	int index = threadIdx.x;
 
 	// A aplcação da porta só pode ser efetuada se os vetores possuirem o mesmo tamanho
-	if(sizeof(t[0])/sizeof(t) == sizeof(c1[0])/sizeof(c1) &&
- 	   sizeof(c1[0])/sizeof(c1) == sizeof(c2[0])/sizeof(c2))
+	if ((sizeof(t) / sizeof(t[0])) == (sizeof(c1) / sizeof(c1[0])) &&
+		(sizeof(t) / sizeof(t[0])) == (sizeof(c2) / sizeof(c2[0])))
 	// Se os qubit c1 e c2 possuirem amplitudes do vetor |1> diferente de 0, trocar o sinal do qubit em t
-	if((d_q[c1[index]].amplitude[1].real != .0f || d_q[c1[index]].amplitude[1].imag != .0f) &&
-	   (d_q[c2[index]].amplitude[1].real != .0f || d_q[c2[index]].amplitude[1].imag != .0f)){
+	if ((d_q[c1[index]].amplitude[1].real != .0f || d_q[c1[index]].amplitude[1].imag != .0f) &&
+		(d_q[c2[index]].amplitude[1].real != .0f || d_q[c2[index]].amplitude[1].imag != .0f)) {
 		complex aux = d_q[t[index]].amplitude[0];
 		d_q[t[index]].amplitude[0] = d_q[t[index]].amplitude[1];
 		d_q[t[index]].amplitude[1] = aux;
 	}
 }
 
-__global__ void cnotGate(qubit* d_q, int *t, int *ctrl){
+__global__ void cnotGate(qubit* d_q, int* t, int* ctrl) {
 	// t é um ponteiro para vetor de qubits a serem afetados pela porta cnotGate
 	// ctrl é um ponteiro para vetor de qubits de controle
 	int index = threadIdx.x;
-
-	// verificar se o temanho dos dois vetores são os mesmos
-	if(sizeof(t[0])/sizeof(t) == sizeof(ctrl[0])/sizeof(ctrl))
 	// Se o qubit ctrl possuir amplitude do vetor |1> diferente de 0, trocar o sinal do qubit em t
-	if(d_q[ctrl[index]].amplitude[1].real != .0f || d_q[ctrl[index]].amplitude[1].imag != .0f){
+	if((sizeof(t) / sizeof(t[0])) == (sizeof(ctrl) / sizeof(ctrl[0])))
+	if (d_q[ctrl[index]].amplitude[1].real != .0f || d_q[ctrl[index]].amplitude[1].imag != .0f) {
 		complex aux = d_q[t[index]].amplitude[0];
 		d_q[t[index]].amplitude[0] = d_q[t[index]].amplitude[1];
 		d_q[t[index]].amplitude[1] = aux;
@@ -96,7 +88,7 @@ __global__ void hadamardGate(qubit* d_q) {
 	d_q[index].amplitude[1] = beta;
 }
 
-__global__ void phaseGate(qubit* d_q) {	
+__global__ void phaseGate(qubit* d_q) {
 	int index = threadIdx.x;
 	float b = -d_q[index].amplitude[1].imag;
 	float c = d_q[index].amplitude[1].real;
