@@ -27,19 +27,19 @@ complex complexProduct(complex a, complex b);
 
 qubit tensorProduct(qubit q1, qubit q2);
 
-void printQubit(qubit q);
+__host__ void printQubit(qubit* q, int size);
 
 /* QUANTUM GATES */
 
-__global__ void toffoliGate(qubit* d_q, int *c1, int *c2, int *t);
+__global__ void toffoliGate(qubit* d_q, int* t, int* c1, int* c2);
 
-__global__ void cnotGate(qubit* d_q, int *t, int *ctrl);
+__global__ void cnotGate(qubit* d_q, int* t, int* ctrl);
 
-__global__ void notGate(qubit *d_q);
+__global__ void notGate(qubit* d_q);
 
-__global__ void hadamardGate(qubit *d_q);
+__global__ void hadamardGate(qubit* d_q);
 
-__global__ void phaseGate(qubit *d_q);
+__global__ void phaseGate(qubit* d_q);
 
 __global__ void notGateRange(qubit* d_q, int a, int b);
 
