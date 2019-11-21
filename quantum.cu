@@ -24,7 +24,7 @@ complex complexProduct(complex a, complex b) {
 	return c;
 }
 
-__host__ void printQubit(qubit* q, int size) {
+__host__ void printQubit(qubit* q, int *result, int size) {
 	printf("Qubit\treal\timag\n");
 	for (int i = 0; i < size; i++) {
 		for (int j = 0; j < 2; j++) {
@@ -32,6 +32,28 @@ __host__ void printQubit(qubit* q, int size) {
 		}
 		printf("\n");
 	}
+	if (result != NULL) {
+		printf("------RESULTADO------\n");
+		printf("Qubit\t--\tValor\n");
+		for (int i = 0; i < size; i++) printf("%d\t\t%d\n", i, result[i]);
+	}
+}
+
+__global__ void mesureQubit(qubit *q, int *mesure_vector, int rand_value) {
+	int index = threadIdx.x;
+
+	int v[N][RAND_PRECISION];
+	// O cálculo da amplitude deve ser verificado
+	float amp = (q[index].amplitude[0].real )*(q[index].amplitude[0].real)*100.0F;
+
+	int fraction = (int)amp;
+	
+	for (int i = 0; i < fraction; i++)
+		v[index][i] = 0;
+	for (int i = fraction; i < RAND_PRECISION; i++)
+		v[index][i] = 1;
+	
+	mesure_vector[index] = v[index][rand_value];
 }
 
 /* QUANTUM GATES */
@@ -75,7 +97,7 @@ __global__ void notGate(qubit* d_q) {
 __global__ void hadamardGate(qubit* d_q) {
 	int index = threadIdx.x;
 
-	float ampH = 0.70710678118; //1/sqrt(2) : sqrt não pode ser utilizado por ser uma função host
+	float ampH = 0.70710678118;
 	complex alpha, beta;
 
 	alpha.real = (d_q[index].amplitude[0].real + d_q[index].amplitude[1].real) * ampH;
