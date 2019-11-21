@@ -3,8 +3,14 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include "device_launch_parameters.h"
 #include "cuda_runtime.h"
+
+#define RAND_PRECISION 100
+#define N 1
+#define T 2
+#define B 1
 
 typedef struct complex {
 	float real = 1.0f, imag = .0f;
@@ -25,9 +31,9 @@ void freeQubit(qubit q);
 
 complex complexProduct(complex a, complex b);
 
-qubit tensorProduct(qubit q1, qubit q2);
+__global__ void mesureQubit(qubit* q, int* mesure_vector, int rand_value);
 
-__host__ void printQubit(qubit* q, int size);
+__host__ void printQubit(qubit* q, int* result, int size);
 
 /* QUANTUM GATES */
 
@@ -46,9 +52,5 @@ __global__ void notGateRange(qubit* d_q, int a, int b);
 __global__ void hadamardGateRange(qubit* d_q, int a, int b);
 
 __global__ void phaseGateRange(qubit* q, int a, int b);
-
-/*
-cnot, toffoli em n qbits, emaranhamento, aplicação em um determinado qbit
-*/
 
 #endif
