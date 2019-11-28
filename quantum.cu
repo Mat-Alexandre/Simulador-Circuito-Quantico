@@ -34,26 +34,25 @@ __host__ void printQubit(qubit* q, int *result, int size) {
 	}
 	if (result != NULL) {
 		printf("------RESULTADO------\n");
-		printf("Qubit\t--\tValor\n");
+		printf("Qubit\t--\tColap.\n");
 		for (int i = 0; i < size; i++) printf("%d\t\t%d\n", i, result[i]);
 	}
 }
 
-__global__ void mesureQubit(qubit *q, int *mesure_vector, int rand_value) {
+__global__ void mesureQubit(qubit* q, int* mesure_vector, float percentage) {
 	int index = threadIdx.x;
 
-	int v[N][RAND_PRECISION];
-	// O cálculo da amplitude deve ser verificado
-	float amp = (q[index].amplitude[0].real )*(q[index].amplitude[0].real)*100.0F;
-
-	int fraction = (int)amp;
-	
-	for (int i = 0; i < fraction; i++)
-		v[index][i] = 0;
-	for (int i = fraction; i < RAND_PRECISION; i++)
-		v[index][i] = 1;
-	
-	mesure_vector[index] = v[index][rand_value];
+	float sum = .0f, prev = .0f;
+	int mesure_result = 0;
+	for (int i = 0; i < q[index].size; i++) {
+		float a = q[index].amplitude[1].real * q[index].amplitude[1].real;
+		float b = q[index].amplitude[1].imag * q[index].amplitude[1].imag;
+		sum += (a + b);
+		if (prev <= percentage && percentage <= sum) {
+			mesure_vector[index] = i;
+		}
+		prev = sum;
+	}
 }
 
 /* QUANTUM GATES */
@@ -100,11 +99,16 @@ __global__ void hadamardGate(qubit* d_q) {
 	float ampH = 0.70710678118;
 	complex alpha, beta;
 
-	alpha.real = (d_q[index].amplitude[0].real + d_q[index].amplitude[1].real) * ampH;
-	alpha.imag = (d_q[index].amplitude[0].real + d_q[index].amplitude[1].real) * ampH;
+	float a1 = d_q[index].amplitude[0].real;
+	float a2 = d_q[index].amplitude[0].imag;
+	float b1 = d_q[index].amplitude[1].real;
+	float b2 = d_q[index].amplitude[1].imag;
 
-	beta.real = (d_q[index].amplitude[0].real - d_q[index].amplitude[1].real) * ampH;
-	beta.imag = (d_q[index].amplitude[0].real - d_q[index].amplitude[1].real) * ampH;
+	alpha.real = (a1 + b1) * ampH;
+	alpha.imag = (a2 + b2) * ampH;
+
+	beta.real = (a1 - b1) * ampH;
+	beta.imag = (a2 - b2) * ampH;
 
 	d_q[index].amplitude[0] = alpha;
 	d_q[index].amplitude[1] = beta;
