@@ -7,7 +7,7 @@
 #include "device_launch_parameters.h"
 #include "cuda_runtime.h"
 
-#define RAND_PRECISION 100
+#define RAND_PRECISION 10000
 #define N 1
 #define T 2
 #define B 1
@@ -31,7 +31,7 @@ void freeQubit(qubit q);
 
 complex complexProduct(complex a, complex b);
 
-__global__ void mesureQubit(qubit* q, int* mesure_vector, int rand_value);
+__global__ void mesureQubit(qubit* q, int* mesure_vector, float percentage);
 
 __host__ void printQubit(qubit* q, int* result, int size);
 
