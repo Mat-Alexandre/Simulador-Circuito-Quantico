@@ -8,6 +8,8 @@ int main() {
 	int vect_size = T * sizeof(int);
 	
 	// Variáveis iniciais
+	float rand_value = rand() % RAND_PRECISION;
+	float percentage = (float)(rand_value) / RAND_PRECISION;
 	qubit q[N], *d_q;
 	int mesure[N], *d_mesure;
 	int teste[1], *d_teste;
@@ -35,13 +37,15 @@ int main() {
 	
 	// Aplicação da(s) porta(s)
 	hadamardGate<<<B, N >>>(d_q);
-	mesureQubit<<<B, N>>>(d_q, d_mesure, rand() % RAND_PRECISION);
+	notGate<<<B, N>>>(d_q);
+	mesureQubit<<<1, N>>>(d_q, d_mesure, percentage);
 
 	// Cópia para as variáveis Host
 	cudaMemcpy( q, d_q,  qbit_size, cudaMemcpyDeviceToHost);
 	cudaMemcpy( mesure,   d_mesure, N*sizeof(int), cudaMemcpyDeviceToHost);
-	
+
 	// Imprimindo os resultados
+	printf("Valor sorteado: %f\n", percentage);
 	printf("---AMPLITUDE FINAL---\n");
 	printQubit(q, mesure, N);
 	
