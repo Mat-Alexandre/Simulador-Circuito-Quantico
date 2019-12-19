@@ -2,16 +2,84 @@
 
 /* QUBITS FUNCTIONS */
 
-qubit initQubit(int size) {
-	qubit q;
-	q.amplitude[0].imag = .0f;
-	q.amplitude[0].real = .0f;
-	q.size = size;
-	return q;
+simulator initSimulatorDevice(int size) {
+	simulator d_sim;
+	int qbit_size = sizeof(qubit) * size;
+	int array_size = sizeof(int) * size;
+	
+	cudaMalloc((void**) &d_sim, sizeof(simulator));
+	cudaMalloc((void**) &d_sim.size, sizeof(int));
+	cudaMalloc((void**) &d_sim.q, qbit_size);
+	cudaMalloc((void**) &d_sim.mesure, array_size);
+	cudaMalloc((void**) &d_sim.target, array_size);
+	for(int i = 0; i < 2; i++)
+		cudaMalloc((void**) &d_sim.control[i], array_size);
+
+	d_sim.size = size;
+	printf("Device criado com sucesso.\n");
+	return d_sim;
 }
 
-void freeQubit(qubit q) {
-	free(q.amplitude);
+simulator initSimulator(int size) {
+	simulator sim;
+	sim.size = size;
+	sim.q = (qubit*)calloc(size, sizeof(qubit));
+	
+	sim.mesure = (int*)calloc(size, sizeof(int));
+	sim.target = (int*)calloc(size, sizeof(int));
+	for(int i = 0; i < 2; i++)
+		sim.control[i] = (int*)calloc(size, sizeof(int));
+
+	
+	printf("Host criado com sucesso.\n");
+	return sim;
+}
+
+void cpyToDevice(simulator ori, simulator dest) {
+
+	int qbit_size = sizeof(qubit) * ori.size;
+	int array_size = sizeof(int) * ori.size;
+
+	cudaMemcpy(dest.q, ori.q, qbit_size, cudaMemcpyHostToDevice);
+	cudaMemcpy(dest.mesure, ori.mesure, array_size, cudaMemcpyHostToDevice);
+	cudaMemcpy(dest.target, ori.target, array_size, cudaMemcpyHostToDevice);
+	for (int i = 0; i < 2; i++)
+		cudaMemcpy(dest.control[i], ori.control[i], array_size, cudaMemcpyHostToDevice);
+
+	printf("Copiado para device.\n");
+}
+
+void cpyToHost(simulator ori, simulator dest) {
+
+	int qbit_size = sizeof(qubit) * ori.size;
+	int array_size = sizeof(int) * ori.size;
+
+	cudaMemcpy(ori.q, dest.q, qbit_size, cudaMemcpyDeviceToHost);
+	cudaMemcpy(ori.mesure, dest.mesure, array_size, cudaMemcpyDeviceToHost);
+	cudaMemcpy(ori.target, dest.target, array_size, cudaMemcpyDeviceToHost);
+	for (int i = 0; i < 2; i++)
+		cudaMemcpy(ori.control[i], dest.control[i], array_size, cudaMemcpyDeviceToHost);
+
+	printf("Copiado para host.\n");
+}
+
+void freeSimulatorDevice(simulator d_simu) {
+	cudaFree(d_simu.q);
+	cudaFree(d_simu.mesure);
+	cudaFree(d_simu.target);
+	for(int i = 0; i < 2; i++)
+		cudaFree(d_simu.control[i]);
+	cudaFree(d_simu.control);
+	printf("Device liberado.\n");
+}
+
+void freeSimulatorHost(simulator simu) {
+	free(simu.q);
+	free(simu.mesure);
+	free(simu.target);
+	for(int i = 0; i < 2; i++)
+		free(simu.control[i]);
+	printf("Host liberado.\n");
 }
 
 /* OTHER FUNCTIONS*/
@@ -25,12 +93,15 @@ complex complexProduct(complex a, complex b) {
 }
 
 __host__ void printQubit(qubit* q, int *result, int size) {
-	printf("Qubit\treal\timag\n");
+	printf("Qubit\t\n\t|");
+	for (int i = 0; i < 2; i++) printf("------|%d>------", i); //vetor
+
 	for (int i = 0; i < size; i++) {
-		for (int j = 0; j < 2; j++) {
-			printf("%d.%d\t%.2f\t%.2f\n", i, j, q[i].amplitude[j].real, q[i].amplitude[j].imag);
+		printf("\n%d\t|", i); // qbit
+		for (int j = 0; j < q[i].size; j++) {
+			printf("(%.2f + %.2fi)\t", q[i].amplitude[j].real, q[i].amplitude[j].imag); // amplitudes
 		}
-		printf("\n");
+		printf("\n\n");
 	}
 	if (result != NULL) {
 		printf("------RESULTADO------\n");
@@ -57,6 +128,7 @@ __global__ void mesureQubit(qubit* q, int* mesure_vector, float percentage) {
 
 /* QUANTUM GATES */
 
+// Toffoli e cnot precisam representar estados emaranhados
 __global__ void toffoliGate(qubit* d_q, int* t, int* c1, int* c2) {
 	int index = threadIdx.x;
 
@@ -122,41 +194,40 @@ __global__ void phaseGate(qubit* d_q) {
 	d_q[index].amplitude[1].imag = c;
 }
 
-__global__ void notGateRange(qubit* d_q, int a, int b) {
-	// Executa a função nos bits dentro do range de a -- b
+// As funções Multi aplicam o resultado da operação nos qbits indicados em target
+
+__global__ void notGateMulti(qubit* d_q, int *target) {
 	int index = threadIdx.x;
-	if (index >= a && index <= b) {
-		complex aux = d_q[index].amplitude[0];
-		d_q[index].amplitude[0] = d_q[index].amplitude[1];
-		d_q[index].amplitude[1] = aux;
-	}
+	complex aux = d_q[target[index]].amplitude[0];
+	d_q[target[index]].amplitude[0] = d_q[target[index]].amplitude[1];
+	d_q[target[index]].amplitude[1] = aux;
 }
 
-__global__ void hadamardGateRange(qubit* d_q, int a, int b) {
+__global__ void hadamardGateMulti(qubit* d_q, int *target) {
 	int index = threadIdx.x;
 
-	if (index >= a && index <= b) {
+	float ampH = 0.70710678118;
+	complex alpha, beta;
 
-		float ampH = 0.70710678118;
-		complex alpha, beta;
+	float a1 = d_q[target[index]].amplitude[0].real;
+	float a2 = d_q[target[index]].amplitude[0].imag;
+	float b1 = d_q[target[index]].amplitude[1].real;
+	float b2 = d_q[target[index]].amplitude[1].imag;
 
-		alpha.real = (d_q[index].amplitude[0].real + d_q[index].amplitude[1].real) * ampH;
-		alpha.imag = (d_q[index].amplitude[0].real + d_q[index].amplitude[1].real) * ampH;
+	alpha.real = (a1 + b1) * ampH;
+	alpha.imag = (a2 + b2) * ampH;
 
-		beta.real = (d_q[index].amplitude[0].real - d_q[index].amplitude[1].real) * ampH;
-		beta.imag = (d_q[index].amplitude[0].real - d_q[index].amplitude[1].real) * ampH;
+	beta.real = (a1 - b1) * ampH;
+	beta.imag = (a2 - b2) * ampH;
 
-		d_q[index].amplitude[0] = alpha;
-		d_q[index].amplitude[1] = beta;
-	}
+	d_q[target[index]].amplitude[0] = alpha;
+	d_q[target[index]].amplitude[1] = beta;
 }
 
-__global__ void phaseGateRange(qubit* q, int a, int b) {
+__global__ void phaseGateMulti(qubit* q, int *target) {
 	int index = threadIdx.x;
-	if (index >= a && index <= b) {
-		float b = -q[index].amplitude[1].imag;
-		float c = q[index].amplitude[1].real;
-		q[index].amplitude[1].real = b;
-		q[index].amplitude[1].imag = c;
-	}
+	float b = -q[target[index]].amplitude[1].imag;
+	float c = q[target[index]].amplitude[1].real;
+	q[target[index]].amplitude[1].real = b;
+	q[target[index]].amplitude[1].imag = c;
 }
