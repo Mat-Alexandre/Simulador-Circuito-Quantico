@@ -13,19 +13,35 @@
 #define B 1
 
 typedef struct complex {
-	float real = 1.0f, imag = .0f;
+	float real, imag;
 } complex;
 
 typedef struct qubit {
-	complex amplitude[2];
-	int size = 2;
+	complex amplitude[2]; // deeve ser alterado para [size]
+	int size;
 } qubit;
+
+typedef struct simulator{
+	qubit *q;
+	int *mesure;
+	int *target;
+	int *control[2];
+	int size;
+} simulator;
 
 /* QUBITS FUNCTIONS */
 
-qubit initQubit(int size);
+simulator initSimulatorDevice(int size);
 
-void freeQubit(qubit q);
+simulator initSimulator(int size);
+
+void cpyToDevice(simulator ori, simulator dest);
+
+void cpyToHost(simulator ori, simulator dest);
+
+void freeSimulatorHost(simulator simu);
+
+void freeSimulatorDevice(simulator d_simu);
 
 /* OTHER FUNCTIONS*/
 
@@ -47,10 +63,10 @@ __global__ void hadamardGate(qubit* d_q);
 
 __global__ void phaseGate(qubit* d_q);
 
-__global__ void notGateRange(qubit* d_q, int a, int b);
+__global__ void notGateMulti(qubit* d_q, int *target);
 
-__global__ void hadamardGateRange(qubit* d_q, int a, int b);
+__global__ void hadamardGateMulti(qubit* d_q, int *target);
 
-__global__ void phaseGateRange(qubit* q, int a, int b);
+__global__ void phaseGateMulti(qubit* q, int *target);
 
 #endif
