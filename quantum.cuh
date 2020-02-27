@@ -31,17 +31,17 @@ typedef struct simulator{
 
 /* QUBITS FUNCTIONS */
 
-simulator initSimulatorDevice(int size);
+__host__ simulator initSimulatorDevice(int size);
 
-simulator initSimulator(int size);
+__host__ simulator initSimulatorHost(int size);
 
-void cpyToDevice(simulator ori, simulator dest);
+__host__ void cpyToDevice(simulator ori, simulator dest);
 
-void cpyToHost(simulator ori, simulator dest);
+__host__ void cpyToHost(simulator ori, simulator dest);
 
-void freeSimulatorHost(simulator simu);
+__host__ void freeSimulatorHost(simulator simu);
 
-void freeSimulatorDevice(simulator d_simu);
+__host__ void freeSimulatorDevice(simulator d_simu);
 
 /* OTHER FUNCTIONS*/
 
@@ -49,7 +49,7 @@ complex complexProduct(complex a, complex b);
 
 __global__ void mesureQubit(qubit* q, int* mesure_vector, float percentage);
 
-__host__ void printQubit(qubit* q, int* result, int size);
+__host__ void printQubit(simulator sim, int mesure);
 
 /* QUANTUM GATES */
 
@@ -63,10 +63,16 @@ __global__ void hadamardGate(qubit* d_q);
 
 __global__ void phaseGate(qubit* d_q);
 
-__global__ void notGateMulti(qubit* d_q, int *target);
+__global__ void notGate_T(qubit* d_q, int *target);
 
-__global__ void hadamardGateMulti(qubit* d_q, int *target);
+__global__ void hadamardGate_T(qubit* d_q, int *target);
 
-__global__ void phaseGateMulti(qubit* q, int *target);
+__global__ void phaseGate_T(qubit* q, int *target);
+
+__global__ void notGate_All(simulator sim);
+
+__global__ void hadamardGate_All(simulator sim);
+
+__global__ void phaseGate_All(simulator sim);
 
 #endif
