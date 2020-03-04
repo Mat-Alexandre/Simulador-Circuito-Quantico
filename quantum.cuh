@@ -21,11 +21,11 @@ typedef struct qubit {
 	int size;
 } qubit;
 
-typedef struct simulator{
-	qubit *q;
-	int *mesure;
-	int *target;
-	int *control[2];
+typedef struct simulator {
+	qubit* q;
+	int* mesure;
+	int* target;
+	int* control[2];
 	int size;
 } simulator;
 
@@ -53,7 +53,7 @@ __host__ void printQubit(simulator sim, int mesure);
 
 /* QUANTUM GATES */
 
-__global__ void toffoliGate(qubit* d_q, int* t, int* c1, int* c2);
+__global__ void toffoliGate(qubit* d_q, int t, int* c1, int* c2);
 
 __global__ void cnotGate(qubit* d_q, int* t, int* ctrl);
 
@@ -63,16 +63,10 @@ __global__ void hadamardGate(qubit* d_q);
 
 __global__ void phaseGate(qubit* d_q);
 
-__global__ void notGate_T(qubit* d_q, int *target);
+__global__ void notGate_T(qubit* d_q, int target);
 
-__global__ void hadamardGate_T(qubit* d_q, int *target);
+__global__ void hadamardGate_T(qubit* d_q, int target);
 
-__global__ void phaseGate_T(qubit* q, int *target);
-
-__global__ void notGate_All(simulator sim);
-
-__global__ void hadamardGate_All(simulator sim);
-
-__global__ void phaseGate_All(simulator sim);
+__global__ void phaseGate_T(qubit* q, int target);
 
 #endif
